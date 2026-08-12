@@ -1,19 +1,14 @@
-/* =========================================================
-   EmergencyConnect
-   Pure JavaScript
-   - No framework
-   - No npm
-   - No TypeScript
-   - localStorage
-   - Geolocation API
-   - Hash routing
-   ========================================================= */
-
 "use strict";
 
+/* =========================================================
+   EMERGENCY CONNECT
+   Pure HTML + CSS + JavaScript
+   Production-safe frontend version
+   ========================================================= */
+
 
 /* =========================================================
-   1. LOCAL STORAGE
+   1. STORAGE
    ========================================================= */
 
 const STORAGE = {
@@ -26,16 +21,20 @@ const STORAGE = {
 
 function readStorage(key, fallback) {
     try {
-        const value = localStorage.getItem(key);
+        const raw = window.localStorage.getItem(key);
 
-        if (value === null) {
+        if (raw === null) {
             return fallback;
         }
 
-        return JSON.parse(value);
+        return JSON.parse(raw);
 
     } catch (error) {
-        console.error("Could not read localStorage:", error);
+        console.error(
+            `Error reading localStorage key "${key}":`,
+            error
+        );
+
         return fallback;
     }
 }
@@ -43,43 +42,74 @@ function readStorage(key, fallback) {
 
 function writeStorage(key, value) {
     try {
-        localStorage.setItem(
+        window.localStorage.setItem(
             key,
             JSON.stringify(value)
         );
 
+        return true;
+
     } catch (error) {
-        console.error("Could not write localStorage:", error);
-        showToast("Could not save data.", true);
+        console.error(
+            `Error writing localStorage key "${key}":`,
+            error
+        );
+
+        return false;
     }
 }
 
 
 function removeStorage(key) {
-    localStorage.removeItem(key);
+    try {
+        window.localStorage.removeItem(key);
+    } catch (error) {
+        console.error(
+            `Error removing localStorage key "${key}":`,
+            error
+        );
+    }
 }
 
 
-function makeId(prefix) {
+function generateId(prefix) {
     return (
         prefix +
-        Math.random().toString(36).slice(2, 9) +
-        Date.now().toString(36).slice(-5)
+        "_" +
+        Date.now().toString(36) +
+        "_" +
+        Math.random()
+            .toString(36)
+            .substring(2, 9)
     );
 }
 
 
 /* =========================================================
-   2. AUTHENTICATION
+   2. AUTH / ROLE
    ========================================================= */
 
 function getRole() {
-    return readStorage(STORAGE.ROLE, null);
+    return readStorage(
+        STORAGE.ROLE,
+        null
+    );
 }
 
 
 function login(role) {
-    writeStorage(STORAGE.ROLE, role);
+
+    if (
+        role !== "user" &&
+        role !== "admin"
+    ) {
+        return;
+    }
+
+    writeStorage(
+        STORAGE.ROLE,
+        role
+    );
 
     if (role === "admin") {
         navigate("admin/dashboard");
@@ -90,16 +120,21 @@ function login(role) {
 
 
 function logout() {
-    removeStorage(STORAGE.ROLE);
+
+    removeStorage(
+        STORAGE.ROLE
+    );
+
     navigate("login");
 }
 
 
 /* =========================================================
-   3. EMERGENCY CATEGORIES
+   3. CATEGORIES
    ========================================================= */
 
 const CATEGORIES = [
+
     {
         type: "hospital",
         label: "Hospital",
@@ -135,31 +170,37 @@ const CATEGORIES = [
         label: "Blood Bank",
         icon: "🩸"
     }
+
 ];
 
 
-function categoryInfo(type) {
+function getCategoryInfo(type) {
 
     return (
         CATEGORIES.find(
-            category => category.type === type
+            category =>
+                category.type === type
         ) || {
-            type,
+
+            type: type,
+
             label: type,
+
             icon: "🏢"
+
         }
     );
 }
 
 
 /* =========================================================
-   4. DEFAULT SERVICE DATA
+   4. DEFAULT SERVICES
    ========================================================= */
 
 const DEFAULT_SERVICES = [
 
     {
-        id: "h1",
+        id: "hospital_1",
         name: "AIIMS Delhi",
         type: "hospital",
         phone: "+911126588500",
@@ -169,7 +210,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "h2",
+        id: "hospital_2",
         name: "Safdarjung Hospital",
         type: "hospital",
         phone: "+911126707444",
@@ -179,7 +220,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "h3",
+        id: "hospital_3",
         name: "Fortis Escorts",
         type: "hospital",
         phone: "+911147135000",
@@ -189,27 +230,27 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "a1",
+        id: "ambulance_1",
         name: "CATS Ambulance Service",
         type: "ambulance",
         phone: "102",
-        address: "Citywide, Delhi NCR",
+        address: "Delhi NCR",
         lat: 28.6139,
         lng: 77.209
     },
 
     {
-        id: "a2",
-        name: "Dial 108 Ambulance",
+        id: "ambulance_2",
+        name: "Emergency Ambulance",
         type: "ambulance",
         phone: "108",
-        address: "Emergency Response",
+        address: "Delhi NCR",
         lat: 28.6304,
         lng: 77.2177
     },
 
     {
-        id: "p1",
+        id: "police_1",
         name: "Connaught Place Police Station",
         type: "police",
         phone: "100",
@@ -219,7 +260,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "p2",
+        id: "police_2",
         name: "Saket Police Station",
         type: "police",
         phone: "+911126562100",
@@ -229,7 +270,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "f1",
+        id: "fire_1",
         name: "Delhi Fire Service HQ",
         type: "fire",
         phone: "101",
@@ -239,7 +280,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "f2",
+        id: "fire_2",
         name: "Laxmi Nagar Fire Station",
         type: "fire",
         phone: "101",
@@ -249,7 +290,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "ph1",
+        id: "pharmacy_1",
         name: "Apollo Pharmacy",
         type: "pharmacy",
         phone: "+911860500500",
@@ -259,7 +300,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "ph2",
+        id: "pharmacy_2",
         name: "1mg Pharmacy",
         type: "pharmacy",
         phone: "+919999999999",
@@ -269,7 +310,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "b1",
+        id: "blood_1",
         name: "Red Cross Blood Bank",
         type: "bloodbank",
         phone: "+911123711551",
@@ -279,7 +320,7 @@ const DEFAULT_SERVICES = [
     },
 
     {
-        id: "b2",
+        id: "blood_2",
         name: "Rotary Blood Bank",
         type: "bloodbank",
         phone: "+911129849393",
@@ -293,11 +334,11 @@ const DEFAULT_SERVICES = [
 
 function getServices() {
 
-    let services =
-        readStorage(
-            STORAGE.SERVICES,
-            null
-        );
+    let services = readStorage(
+        STORAGE.SERVICES,
+        null
+    );
+
 
     if (
         !Array.isArray(services) ||
@@ -312,56 +353,87 @@ function getServices() {
         );
     }
 
+
     return services;
 }
 
 
-function addService(service) {
+function addService(data) {
 
-    const services = getServices();
+    const services =
+        getServices();
 
-    const newService = {
 
-        ...service,
+    const service = {
 
-        id: makeId("service_"),
+        id: generateId("service"),
 
-        lat: Number(service.lat),
+        name: data.name,
 
-        lng: Number(service.lng)
+        type: data.type,
+
+        phone: data.phone,
+
+        address: data.address,
+
+        lat: Number(data.lat),
+
+        lng: Number(data.lng)
 
     };
 
-    writeStorage(
+
+    services.push(service);
+
+
+    return writeStorage(
         STORAGE.SERVICES,
-        [
-            newService,
-            ...services
-        ]
+        services
     );
 }
 
 
-function updateService(id, changes) {
+function updateService(
+    id,
+    data
+) {
 
     const services =
-        getServices().map(service => {
+        getServices();
 
-            if (service.id === id) {
 
-                return {
-                    ...service,
-                    ...changes,
-                    lat: Number(changes.lat),
-                    lng: Number(changes.lng)
-                };
+    const index =
+        services.findIndex(
+            service =>
+                service.id === id
+        );
 
-            }
 
-            return service;
-        });
+    if (index === -1) {
+        return false;
+    }
 
-    writeStorage(
+
+    services[index] = {
+
+        ...services[index],
+
+        name: data.name,
+
+        type: data.type,
+
+        phone: data.phone,
+
+        address: data.address,
+
+        lat: Number(data.lat),
+
+        lng: Number(data.lng)
+
+    };
+
+
+    return writeStorage(
         STORAGE.SERVICES,
         services
     );
@@ -371,40 +443,61 @@ function updateService(id, changes) {
 function deleteService(id) {
 
     const services =
-        getServices().filter(
-            service => service.id !== id
+        getServices();
+
+
+    const filtered =
+        services.filter(
+            service =>
+                service.id !== id
         );
 
-    writeStorage(
+
+    return writeStorage(
         STORAGE.SERVICES,
-        services
+        filtered
     );
 }
 
 
 /* =========================================================
-   5. EMERGENCY REQUESTS
+   5. REQUESTS
    ========================================================= */
 
 const REQUEST_STATUSES = [
+
     "Pending",
+
     "Acknowledged",
+
     "In Progress",
+
     "Resolved"
+
 ];
 
 
 function getRequests() {
 
-    return readStorage(
-        STORAGE.REQUESTS,
-        []
-    )
-    .slice()
-    .sort(
-        (a, b) =>
-            b.createdAt - a.createdAt
-    );
+    const requests =
+        readStorage(
+            STORAGE.REQUESTS,
+            []
+        );
+
+
+    if (!Array.isArray(requests)) {
+        return [];
+    }
+
+
+    return requests
+        .slice()
+        .sort(
+            (a, b) =>
+                Number(b.createdAt) -
+                Number(a.createdAt)
+        );
 }
 
 
@@ -413,28 +506,55 @@ function createRequest(data) {
     const requests =
         getRequests();
 
-    const now = Date.now();
+
+    const now =
+        Date.now();
+
 
     const request = {
 
-        ...data,
+        id: generateId("request"),
 
-        id: makeId("request_"),
+        category:
+            data.category,
 
-        status: "Pending",
+        name:
+            data.name,
 
-        createdAt: now,
+        phone:
+            data.phone,
 
-        updatedAt: now
+        description:
+            data.description,
+
+        lat:
+            Number(data.lat),
+
+        lng:
+            Number(data.lng),
+
+        status:
+            "Pending",
+
+        createdAt:
+            now,
+
+        updatedAt:
+            now
+
     };
+
+
+    requests.unshift(
+        request
+    );
+
 
     writeStorage(
         STORAGE.REQUESTS,
-        [
-            request,
-            ...requests
-        ]
+        requests
     );
+
 
     return request;
 }
@@ -442,32 +562,43 @@ function createRequest(data) {
 
 function updateRequestStatus(
     id,
-    status
+    newStatus
 ) {
 
+    if (
+        !REQUEST_STATUSES.includes(
+            newStatus
+        )
+    ) {
+        return false;
+    }
+
+
     const requests =
-        readStorage(
-            STORAGE.REQUESTS,
-            []
-        ).map(request => {
+        getRequests();
 
-            if (request.id === id) {
 
-                return {
+    const index =
+        requests.findIndex(
+            request =>
+                request.id === id
+        );
 
-                    ...request,
 
-                    status,
+    if (index === -1) {
+        return false;
+    }
 
-                    updatedAt: Date.now()
 
-                };
-            }
+    requests[index].status =
+        newStatus;
 
-            return request;
-        });
 
-    writeStorage(
+    requests[index].updatedAt =
+        Date.now();
+
+
+    return writeStorage(
         STORAGE.REQUESTS,
         requests
     );
@@ -475,15 +606,23 @@ function updateRequestStatus(
 
 
 /* =========================================================
-   6. TRUSTED CONTACTS
+   6. CONTACTS
    ========================================================= */
 
 function getContacts() {
 
-    return readStorage(
-        STORAGE.CONTACTS,
-        []
-    );
+    const contacts =
+        readStorage(
+            STORAGE.CONTACTS,
+            []
+        );
+
+
+    return Array.isArray(
+        contacts
+    )
+        ? contacts
+        : [];
 }
 
 
@@ -495,17 +634,22 @@ function addContact(
     const contacts =
         getContacts();
 
+
     contacts.push({
 
-        id: makeId("contact_"),
+        id:
+            generateId("contact"),
 
-        name,
+        name:
+            name,
 
-        phone
+        phone:
+            phone
 
     });
 
-    writeStorage(
+
+    return writeStorage(
         STORAGE.CONTACTS,
         contacts
     );
@@ -514,43 +658,20 @@ function addContact(
 
 function deleteContact(id) {
 
-    writeStorage(
+    const contacts =
+        getContacts();
 
-        STORAGE.CONTACTS,
 
-        getContacts().filter(
+    const filtered =
+        contacts.filter(
             contact =>
                 contact.id !== id
-        )
-
-    );
-}
+        );
 
 
-function createSmsLink(
-    phone,
-    name,
-    coords
-) {
-
-    let location = "";
-
-    if (coords) {
-
-        location =
-            ` My location: ` +
-            `https://www.google.com/maps/?q=` +
-            `${coords.lat},${coords.lng}`;
-    }
-
-    const message =
-        `SOS! This is ${name || "a contact"}. ` +
-        `I need help.` +
-        location;
-
-    return (
-        `sms:${phone}?body=` +
-        encodeURIComponent(message)
+    return writeStorage(
+        STORAGE.CONTACTS,
+        filtered
     );
 }
 
@@ -572,10 +693,12 @@ const geo = {
 
 function requestLocation() {
 
-    if (!navigator.geolocation) {
+    if (
+        !("geolocation" in navigator)
+    ) {
 
         geo.error =
-            "Geolocation is not supported by this browser.";
+            "Geolocation is not supported by your browser.";
 
         geo.loading = false;
 
@@ -584,16 +707,18 @@ function requestLocation() {
         return;
     }
 
+
     geo.loading = true;
 
     geo.error = null;
+
 
     refreshCurrentPage();
 
 
     navigator.geolocation.getCurrentPosition(
 
-        position => {
+        function (position) {
 
             geo.coords = {
 
@@ -605,31 +730,68 @@ function requestLocation() {
 
             };
 
+
             geo.loading = false;
 
             geo.error = null;
 
+
             refreshCurrentPage();
 
         },
 
-        error => {
+
+        function (error) {
 
             geo.loading = false;
 
-            geo.error =
-                error.message ||
-                "Unable to get your location.";
+
+            switch (error.code) {
+
+                case error.PERMISSION_DENIED:
+
+                    geo.error =
+                        "Location permission was denied.";
+
+                    break;
+
+
+                case error.POSITION_UNAVAILABLE:
+
+                    geo.error =
+                        "Location information is unavailable.";
+
+                    break;
+
+
+                case error.TIMEOUT:
+
+                    geo.error =
+                        "Location request timed out.";
+
+                    break;
+
+
+                default:
+
+                    geo.error =
+                        "Could not determine your location.";
+
+            }
+
 
             refreshCurrentPage();
 
         },
+
 
         {
 
             enableHighAccuracy: true,
 
-            timeout: 10000
+            timeout: 15000,
+
+            maximumAge: 30000
 
         }
 
@@ -638,8 +800,7 @@ function requestLocation() {
 
 
 /* =========================================================
-   8. DISTANCE CALCULATION
-   Haversine Formula
+   8. DISTANCE
    ========================================================= */
 
 function distanceInKm(
@@ -649,26 +810,23 @@ function distanceInKm(
     lng2
 ) {
 
-    const earthRadius = 6371;
-
-
-    const toRadians =
-        degrees =>
-            degrees *
-            Math.PI /
-            180;
+    const R = 6371;
 
 
     const dLat =
-        toRadians(
+        (
             lat2 - lat1
-        );
+        ) *
+        Math.PI /
+        180;
 
 
     const dLng =
-        toRadians(
+        (
             lng2 - lng1
-        );
+        ) *
+        Math.PI /
+        180;
 
 
     const a =
@@ -680,13 +838,17 @@ function distanceInKm(
         +
 
         Math.cos(
-            toRadians(lat1)
+            lat1 *
+            Math.PI /
+            180
         )
 
         *
 
         Math.cos(
-            toRadians(lat2)
+            lat2 *
+            Math.PI /
+            180
         )
 
         *
@@ -696,21 +858,15 @@ function distanceInKm(
         ) ** 2;
 
 
-    return (
-
-        earthRadius *
-
+    const c =
         2 *
-
         Math.atan2(
-
             Math.sqrt(a),
-
             Math.sqrt(1 - a)
+        );
 
-        )
 
-    );
+    return R * c;
 }
 
 
@@ -721,10 +877,12 @@ function formatDistance(km) {
         return (
             Math.round(
                 km * 1000
-            ) + " m"
+            ) +
+            " m"
         );
 
     }
+
 
     return (
         km.toFixed(1) +
@@ -733,32 +891,73 @@ function formatDistance(km) {
 }
 
 
-function mapsDirections(
+/* =========================================================
+   9. URL HELPERS
+   ========================================================= */
+
+function mapUrl(
     lat,
     lng
 ) {
 
     return (
-        `https://www.google.com/maps/dir/?api=1` +
-        `&destination=${lat},${lng}`
+        "https://www.google.com/maps/?q=" +
+        encodeURIComponent(
+            `${lat},${lng}`
+        )
     );
 }
 
 
-function mapsLocation(
+function directionsUrl(
     lat,
     lng
 ) {
 
     return (
-        `https://www.google.com/maps/?q=` +
-        `${lat},${lng}`
+        "https://www.google.com/maps/dir/?api=1" +
+        "&destination=" +
+        encodeURIComponent(
+            `${lat},${lng}`
+        )
+    );
+}
+
+
+function createSmsLink(
+    phone,
+    name,
+    coords
+) {
+
+    let message =
+        `SOS! ${name || "I"} need help.`;
+
+
+    if (coords) {
+
+        message +=
+
+            ` My location: ` +
+
+            `https://www.google.com/maps/?q=` +
+
+            `${coords.lat},${coords.lng}`;
+
+    }
+
+
+    return (
+        "sms:" +
+        encodeURIComponent(phone) +
+        "?body=" +
+        encodeURIComponent(message)
     );
 }
 
 
 /* =========================================================
-   9. UI HELPERS
+   10. SECURITY / FORMATTING HELPERS
    ========================================================= */
 
 function escapeHtml(value) {
@@ -767,7 +966,7 @@ function escapeHtml(value) {
         value ?? ""
     ).replace(
         /[&<>"']/g,
-        char => {
+        function (character) {
 
             const map = {
 
@@ -779,69 +978,141 @@ function escapeHtml(value) {
 
                 '"': "&quot;",
 
-                "'": "&#39;"
+                "'": "&#039;"
 
             };
 
-            return map[char];
+
+            return map[
+                character
+            ];
+
         }
     );
 }
 
 
-function formatDate(timestamp) {
+function statusClass(status) {
 
-    return new Date(
-        timestamp
-    ).toLocaleString();
+    return String(status)
+
+        .toLowerCase()
+
+        .replace(
+            /[^a-z0-9]+/g,
+            "-"
+        )
+
+        .replace(
+            /^-|-$/g,
+            ""
+        );
 }
 
 
-let toastTimer;
+function formatDate(timestamp) {
+
+    const date =
+        new Date(timestamp);
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return "Unknown date";
+
+    }
+
+
+    return date.toLocaleString(
+        undefined,
+        {
+            dateStyle: "medium",
+            timeStyle: "short"
+        }
+    );
+}
+
+
+/* =========================================================
+   11. TOAST
+   ========================================================= */
+
+let toastTimer = null;
 
 
 function showToast(
     message,
-    error = false
+    isError = false
 ) {
 
-    const toast =
+    let toast =
         document.getElementById(
             "toast"
         );
 
+
+    if (!toast) {
+
+        toast =
+            document.createElement(
+                "div"
+            );
+
+        toast.id =
+            "toast";
+
+        toast.className =
+            "toast";
+
+        document.body.appendChild(
+            toast
+        );
+    }
+
+
     toast.textContent =
         message;
 
+
     toast.className =
-        `toast show${error ? " error" : ""}`;
+        isError
+            ? "toast show error"
+            : "toast show";
+
 
     clearTimeout(
         toastTimer
     );
 
+
     toastTimer =
         setTimeout(
-            () => {
+            function () {
 
                 toast.className =
                     "toast";
 
             },
-            2500
+            3000
         );
 }
 
 
 /* =========================================================
-   10. ROUTER
+   12. ROUTING
    ========================================================= */
 
 const routes = {
 
-    "": renderLanding,
+    "":
+        renderLanding,
 
-    "login": renderLogin,
+    "login":
+        renderLogin,
 
     "user/dashboard":
         renderUserDashboard,
@@ -872,17 +1143,28 @@ const routes = {
 
 function parseRoute() {
 
+    const hash =
+        window.location.hash ||
+        "#/";
+
+
     const raw =
-        location.hash.replace(
+        hash.replace(
             /^#\/?/,
             ""
         );
 
 
-    const [
-        path,
-        queryString
-    ] = raw.split("?");
+    const parts =
+        raw.split("?");
+
+
+    const path =
+        parts[0] || "";
+
+
+    const queryString =
+        parts[1] || "";
 
 
     const params = {};
@@ -890,28 +1172,23 @@ function parseRoute() {
 
     if (queryString) {
 
-        queryString
-            .split("&")
-            .forEach(pair => {
-
-                const [
-                    key,
-                    value = ""
-                ] = pair.split("=");
+        const searchParams =
+            new URLSearchParams(
+                queryString
+            );
 
 
-                if (key) {
+        searchParams.forEach(
+            function (
+                value,
+                key
+            ) {
 
-                    params[
-                        decodeURIComponent(key)
-                    ] =
-                        decodeURIComponent(
-                            value
-                        );
+                params[key] =
+                    value;
 
-                }
-
-            });
+            }
+        );
     }
 
 
@@ -930,69 +1207,91 @@ function navigate(
     params = {}
 ) {
 
+    const searchParams =
+        new URLSearchParams();
+
+
+    Object.entries(
+        params
+    ).forEach(
+        function (
+            [key, value]
+        ) {
+
+            if (
+                value !== null &&
+                value !== undefined &&
+                value !== ""
+            ) {
+
+                searchParams.set(
+                    key,
+                    value
+                );
+
+            }
+
+        }
+    );
+
+
     const query =
-        new URLSearchParams(
-            params
-        ).toString();
+        searchParams.toString();
 
 
-    location.hash =
+    const newHash =
         "#/" +
         path +
         (
             query
-                ? `?${query}`
+                ? "?" + query
                 : ""
         );
+
+
+    if (
+        window.location.hash ===
+        newHash
+    ) {
+
+        refreshCurrentPage();
+
+    } else {
+
+        window.location.hash =
+            newHash;
+
+    }
 }
-
-
-function refreshCurrentPage() {
-
-    const {
-        path,
-        params
-    } = parseRoute();
-
-
-    renderHeader(path);
-
-
-    const page =
-        routes[path] ||
-        renderNotFound;
-
-
-    page(params);
-}
-
-
-window.addEventListener(
-    "hashchange",
-    refreshCurrentPage
-);
 
 
 /* =========================================================
-   11. HEADER
+   13. HEADER
    ========================================================= */
 
-function renderHeader(path) {
+function renderHeader(
+    currentPath
+) {
 
     const role =
         getRole();
 
 
-    let nav = "";
+    let navigation = "";
 
 
     if (role === "user") {
 
-        nav = `
+        navigation = `
 
             <a
                 href="#/user/dashboard"
-                class="${path === "user/dashboard" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "user/dashboard"
+                        ? "active"
+                        : ""
+                }"
             >
                 Dashboard
             </a>
@@ -1000,7 +1299,12 @@ function renderHeader(path) {
 
             <a
                 href="#/user/nearby"
-                class="${path === "user/nearby" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "user/nearby"
+                        ? "active"
+                        : ""
+                }"
             >
                 Nearby
             </a>
@@ -1008,7 +1312,12 @@ function renderHeader(path) {
 
             <a
                 href="#/user/raise"
-                class="${path === "user/raise" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "user/raise"
+                        ? "active"
+                        : ""
+                }"
             >
                 Raise Request
             </a>
@@ -1016,7 +1325,12 @@ function renderHeader(path) {
 
             <a
                 href="#/user/requests"
-                class="${path === "user/requests" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "user/requests"
+                        ? "active"
+                        : ""
+                }"
             >
                 Requests
             </a>
@@ -1024,22 +1338,33 @@ function renderHeader(path) {
 
             <a
                 href="#/user/sos"
-                class="${path === "user/sos" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "user/sos"
+                        ? "active"
+                        : ""
+                }"
             >
                 SOS
             </a>
 
         `;
+
     }
 
 
     if (role === "admin") {
 
-        nav = `
+        navigation = `
 
             <a
                 href="#/admin/dashboard"
-                class="${path === "admin/dashboard" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "admin/dashboard"
+                        ? "active"
+                        : ""
+                }"
             >
                 Dashboard
             </a>
@@ -1047,7 +1372,12 @@ function renderHeader(path) {
 
             <a
                 href="#/admin/requests"
-                class="${path === "admin/requests" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "admin/requests"
+                        ? "active"
+                        : ""
+                }"
             >
                 Requests
             </a>
@@ -1055,7 +1385,12 @@ function renderHeader(path) {
 
             <a
                 href="#/admin/services"
-                class="${path === "admin/services" ? "active" : ""}"
+                class="${
+                    currentPath ===
+                    "admin/services"
+                        ? "active"
+                        : ""
+                }"
             >
                 Services
             </a>
@@ -1064,7 +1399,7 @@ function renderHeader(path) {
     }
 
 
-    const account = role
+    const accountHTML = role
 
         ? `
 
@@ -1072,9 +1407,11 @@ function renderHeader(path) {
                 ${escapeHtml(role)}
             </span>
 
+
             <button
-                class="btn btn-sm"
                 id="logoutButton"
+                class="btn btn-sm"
+                type="button"
             >
                 Logout
             </button>
@@ -1093,9 +1430,7 @@ function renderHeader(path) {
         `;
 
 
-    document.getElementById(
-        "appHeader"
-    ).outerHTML = `
+    const headerHTML = `
 
         <header
             class="site-header"
@@ -1120,12 +1455,16 @@ function renderHeader(path) {
 
 
                 <nav class="nav">
-                    ${nav}
+
+                    ${navigation}
+
                 </nav>
 
 
                 <div class="btn-row">
-                    ${account}
+
+                    ${accountHTML}
+
                 </div>
 
 
@@ -1134,6 +1473,27 @@ function renderHeader(path) {
         </header>
 
     `;
+
+
+    const oldHeader =
+        document.getElementById(
+            "appHeader"
+        );
+
+
+    if (oldHeader) {
+
+        oldHeader.outerHTML =
+            headerHTML;
+
+    } else {
+
+        document.body.insertAdjacentHTML(
+            "afterbegin",
+            headerHTML
+        );
+
+    }
 
 
     const logoutButton =
@@ -1154,16 +1514,123 @@ function renderHeader(path) {
 
 
 /* =========================================================
-   12. LANDING PAGE
+   14. LOCATION UI
+   ========================================================= */
+
+function locationBar() {
+
+    let text =
+        "Location not shared";
+
+
+    if (geo.loading) {
+
+        text =
+            "Detecting your location...";
+
+    }
+
+    else if (geo.coords) {
+
+        text =
+
+            `Location: ` +
+
+            `${geo.coords.lat.toFixed(4)}, ` +
+
+            `${geo.coords.lng.toFixed(4)}`;
+
+    }
+
+    else if (geo.error) {
+
+        text =
+            geo.error;
+
+    }
+
+
+    return `
+
+        <div class="card location-bar">
+
+            <div class="flex-between">
+
+
+                <div>
+
+                    📍
+
+                    <strong>
+                        ${escapeHtml(text)}
+                    </strong>
+
+                </div>
+
+
+                <button
+                    id="locationButton"
+                    class="btn btn-sm"
+                    type="button"
+                >
+
+                    ${
+                        geo.coords
+                            ? "Refresh location"
+                            : "Get my location"
+                    }
+
+                </button>
+
+
+            </div>
+
+        </div>
+
+    `;
+}
+
+
+function attachLocationButton() {
+
+    const button =
+        document.getElementById(
+            "locationButton"
+        );
+
+
+    if (!button) {
+        return;
+    }
+
+
+    button.addEventListener(
+        "click",
+        requestLocation
+    );
+}
+
+
+/* =========================================================
+   15. LANDING
    ========================================================= */
 
 function renderLanding() {
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    const app =
+        document.getElementById(
+            "app"
+        );
 
-        <div class="page">
+
+    if (!app) {
+        return;
+    }
+
+
+    app.innerHTML = `
+
+        <main class="page">
 
             <div class="container">
 
@@ -1172,10 +1639,8 @@ function renderLanding() {
 
 
                     <span class="badge">
-
-                        ! Emergency response,
+                        🚨 Emergency response,
                         in your pocket
-
                     </span>
 
 
@@ -1190,9 +1655,6 @@ function renderLanding() {
                         police stations, fire stations,
                         pharmacies and blood banks
                         near you.
-
-                        Raise emergency requests
-                        and contact trusted people quickly.
 
                     </p>
 
@@ -1214,7 +1676,7 @@ function renderLanding() {
                             href="#features"
                             class="btn btn-lg"
                         >
-                            Learn more
+                            Learn More
                         </a>
 
                     </div>
@@ -1223,158 +1685,162 @@ function renderLanding() {
                 </section>
 
 
-                <h2
+                <section
                     id="features"
-                    style="text-align:center"
+                    style="margin-top:40px"
                 >
-                    Built for moments that count
-                </h2>
+
+                    <h2
+                        style="text-align:center"
+                    >
+                        Built for moments that count
+                    </h2>
 
 
-                <div class="features">
+                    <div class="features">
 
 
-                    <div class="feature">
+                        <div class="feature">
 
-                        <div class="icon">
-                            📍
+                            <div class="icon">
+                                📍
+                            </div>
+
+                            <h3>
+                                Nearby services
+                            </h3>
+
+                            <p class="muted">
+                                Find emergency services
+                                near your location.
+                            </p>
+
                         </div>
 
-                        <h3>
-                            Nearby services
-                        </h3>
 
-                        <p class="muted">
+                        <div class="feature">
 
-                            Find emergency services
-                            and sort them by distance.
+                            <div class="icon">
+                                🚨
+                            </div>
 
-                        </p>
+                            <h3>
+                                Emergency requests
+                            </h3>
+
+                            <p class="muted">
+                                Raise and track emergency
+                                requests.
+                            </p>
+
+                        </div>
+
+
+                        <div class="feature">
+
+                            <div class="icon">
+                                📞
+                            </div>
+
+                            <h3>
+                                Quick contact
+                            </h3>
+
+                            <p class="muted">
+                                Call emergency services
+                                directly.
+                            </p>
+
+                        </div>
+
+
+                        <div class="feature">
+
+                            <div class="icon">
+                                📱
+                            </div>
+
+                            <h3>
+                                SOS contacts
+                            </h3>
+
+                            <p class="muted">
+                                Notify trusted contacts
+                                with your location.
+                            </p>
+
+                        </div>
+
+
+                        <div class="feature">
+
+                            <div class="icon">
+                                🛡️
+                            </div>
+
+                            <h3>
+                                Admin dashboard
+                            </h3>
+
+                            <p class="muted">
+                                Manage requests and
+                                service listings.
+                            </p>
+
+                        </div>
+
+
+                        <div class="feature">
+
+                            <div class="icon">
+                                💾
+                            </div>
+
+                            <h3>
+                                Local storage
+                            </h3>
+
+                            <p class="muted">
+                                Demo data is stored
+                                directly in the browser.
+                            </p>
+
+                        </div>
+
 
                     </div>
 
+                </section>
 
-                    <div class="feature">
-
-                        <div class="icon">
-                            ⚠️
-                        </div>
-
-                        <h3>
-                            Raise a request
-                        </h3>
-
-                        <p class="muted">
-
-                            Submit an emergency
-                            request with your location.
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="feature">
-
-                        <div class="icon">
-                            📞
-                        </div>
-
-                        <h3>
-                            Quick contact
-                        </h3>
-
-                        <p class="muted">
-
-                            Call services or open
-                            directions immediately.
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="feature">
-
-                        <div class="icon">
-                            📱
-                        </div>
-
-                        <h3>
-                            SOS contacts
-                        </h3>
-
-                        <p class="muted">
-
-                            Send your location
-                            to trusted contacts.
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="feature">
-
-                        <div class="icon">
-                            🛡️
-                        </div>
-
-                        <h3>
-                            Admin controls
-                        </h3>
-
-                        <p class="muted">
-
-                            Manage emergency
-                            requests and services.
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="feature">
-
-                        <div class="icon">
-                            💾
-                        </div>
-
-                        <h3>
-                            Local storage
-                        </h3>
-
-                        <p class="muted">
-
-                            Demo data remains
-                            in this browser.
-
-                        </p>
-
-                    </div>
-
-
-                </div>
 
             </div>
 
-        </div>
+        </main>
 
     `;
 }
 
 
 /* =========================================================
-   13. LOGIN
+   16. LOGIN
    ========================================================= */
 
 function renderLogin() {
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    const app =
+        document.getElementById(
+            "app"
+        );
 
-        <div class="page">
+
+    if (!app) {
+        return;
+    }
+
+
+    app.innerHTML = `
+
+        <main class="page">
 
             <div class="container">
 
@@ -1383,15 +1849,14 @@ function renderLogin() {
 
 
                     <h1>
-                        Choose a role
+                        Choose your role
                     </h1>
 
 
                     <p class="sub">
 
-                        This is a demo login.
-                        No real password or
-                        backend is used.
+                        Demo authentication using
+                        localStorage.
 
                     </p>
 
@@ -1403,8 +1868,9 @@ function renderLogin() {
 
 
                         <button
-                            class="btn btn-primary btn-lg"
                             id="userLogin"
+                            class="btn btn-primary btn-lg"
+                            type="button"
                         >
 
                             👤 Continue as User
@@ -1413,8 +1879,9 @@ function renderLogin() {
 
 
                         <button
-                            class="btn btn-lg"
                             id="adminLogin"
+                            class="btn btn-lg"
+                            type="button"
                         >
 
                             🛡️ Continue as Admin
@@ -1430,43 +1897,59 @@ function renderLogin() {
 
             </div>
 
-        </div>
+        </main>
 
     `;
 
 
     document
-        .getElementById("userLogin")
+        .getElementById(
+            "userLogin"
+        )
         .addEventListener(
             "click",
-            () => login("user")
+            function () {
+
+                login("user");
+
+            }
         );
 
 
     document
-        .getElementById("adminLogin")
+        .getElementById(
+            "adminLogin"
+        )
         .addEventListener(
             "click",
-            () => login("admin")
+            function () {
+
+                login("admin");
+
+            }
         );
 }
 
 
 /* =========================================================
-   14. USER DASHBOARD
+   17. USER DASHBOARD
    ========================================================= */
 
 function renderUserDashboard() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     const requests =
         getRequests();
 
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    app.innerHTML = `
 
-        <div class="page">
+        <main class="page">
 
             <div class="container">
 
@@ -1477,12 +1960,12 @@ function renderUserDashboard() {
                         User Dashboard
                     </h1>
 
-                    <div class="sub">
+                    <p class="sub">
 
                         Quickly find help
                         or raise an emergency request.
 
-                    </div>
+                    </p>
 
                 </div>
 
@@ -1540,8 +2023,8 @@ function renderUserDashboard() {
 
                         <p class="muted">
 
-                            Manage trusted contacts
-                            and send SOS messages.
+                            Manage your trusted
+                            emergency contacts.
 
                         </p>
 
@@ -1568,8 +2051,7 @@ function renderUserDashboard() {
                             <p class="muted">
 
                                 ${requests.length}
-                                request(s)
-                                saved locally.
+                                request(s) stored locally.
 
                             </p>
 
@@ -1577,8 +2059,8 @@ function renderUserDashboard() {
 
 
                         <a
-                            class="btn btn-sm"
                             href="#/user/requests"
+                            class="btn btn-sm"
                         >
                             View all
                         </a>
@@ -1591,112 +2073,25 @@ function renderUserDashboard() {
 
             </div>
 
-        </div>
+        </main>
 
     `;
 }
 
 
 /* =========================================================
-   15. LOCATION BAR
-   ========================================================= */
-
-function locationBar() {
-
-    let message =
-        "Location not shared.";
-
-
-    if (geo.loading) {
-
-        message =
-            "Detecting your location...";
-
-    }
-
-    else if (geo.coords) {
-
-        message =
-            `Location: ` +
-            `${geo.coords.lat.toFixed(4)}, ` +
-            `${geo.coords.lng.toFixed(4)}`;
-
-    }
-
-    else if (geo.error) {
-
-        message =
-            geo.error;
-
-    }
-
-
-    return `
-
-        <div class="card location-bar">
-
-            <div class="flex-between">
-
-
-                <div>
-
-                    📍
-
-                    <strong>
-                        ${escapeHtml(message)}
-                    </strong>
-
-                </div>
-
-
-                <button
-                    class="btn btn-sm"
-                    id="locationButton"
-                >
-
-                    ${
-                        geo.coords
-                            ? "Refresh location"
-                            : "Get my location"
-                    }
-
-                </button>
-
-
-            </div>
-
-        </div>
-
-    `;
-}
-
-
-function attachLocationButton() {
-
-    const button =
-        document.getElementById(
-            "locationButton"
-        );
-
-
-    if (button) {
-
-        button.addEventListener(
-            "click",
-            requestLocation
-        );
-
-    }
-}
-
-
-/* =========================================================
-   16. NEARBY SERVICES
+   18. NEARBY SERVICES
    ========================================================= */
 
 function renderNearby(
     params = {}
 ) {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     const selectedCategory =
         params.category || "";
@@ -1718,58 +2113,85 @@ function renderNearby(
     }
 
 
-    let items =
-        services.map(service => {
+    const items =
+        services
+            .map(
+                service => {
 
-            const distance =
-                geo.coords
-
-                    ? distanceInKm(
-
-                        geo.coords.lat,
-
-                        geo.coords.lng,
-
-                        service.lat,
-
-                        service.lng
-
-                    )
-
-                    : null;
+                    let distance = null;
 
 
-            return {
+                    if (geo.coords) {
 
-                service,
+                        distance =
+                            distanceInKm(
 
-                distance
+                                geo.coords.lat,
 
-            };
+                                geo.coords.lng,
 
-        });
+                                service.lat,
 
+                                service.lng
 
-    if (geo.coords) {
+                            );
 
-        items.sort(
-
-            (a, b) =>
-
-                (a.distance ?? Infinity) -
-
-                (b.distance ?? Infinity)
-
-        );
-
-    }
+                    }
 
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+                    return {
 
-        <div class="page">
+                        service,
+
+                        distance
+
+                    };
+
+                }
+            )
+            .sort(
+                (a, b) => {
+
+                    if (
+                        a.distance === null &&
+                        b.distance === null
+                    ) {
+
+                        return 0;
+
+                    }
+
+
+                    if (
+                        a.distance === null
+                    ) {
+
+                        return 1;
+
+                    }
+
+
+                    if (
+                        b.distance === null
+                    ) {
+
+                        return -1;
+
+                    }
+
+
+                    return (
+                        a.distance -
+                        b.distance
+                    );
+
+                }
+            );
+
+
+    app.innerHTML = `
+
+        <main class="page">
 
             <div class="container">
 
@@ -1777,20 +2199,15 @@ function renderNearby(
                 <div class="page-head">
 
                     <h1>
-                        Nearby services
+                        Nearby Services
                     </h1>
 
-                    <div class="sub">
+                    <p class="sub">
 
-                        ${
-                            geo.coords
+                        Find emergency services
+                        near you.
 
-                                ? "Results are sorted by distance."
-
-                                : "Share your location to sort results by distance."
-                        }
-
-                    </div>
+                    </p>
 
                 </div>
 
@@ -1800,11 +2217,12 @@ function renderNearby(
 
                 <div
                     class="pills"
-                    style="margin-bottom:15px"
+                    style="margin-bottom:20px"
                 >
 
 
                     <button
+                        type="button"
                         class="pill ${
                             selectedCategory === ""
                                 ? "active"
@@ -1824,22 +2242,28 @@ function renderNearby(
                             .map(
                                 category => `
 
-                                <button
-                                    class="pill ${
-                                        selectedCategory ===
-                                        category.type
-                                            ? "active"
-                                            : ""
-                                    }"
-                                    data-category="${category.type}"
-                                >
+                                    <button
+                                        type="button"
+                                        class="pill ${
+                                            selectedCategory ===
+                                            category.type
+                                                ? "active"
+                                                : ""
+                                        }"
+                                        data-category="${category.type}"
+                                    >
 
-                                    ${category.icon}
-                                    ${category.label}
+                                        ${
+                                            category.icon
+                                        }
 
-                                </button>
+                                        ${
+                                            category.label
+                                        }
 
-                            `
+                                    </button>
+
+                                `
                             )
                             .join("")
 
@@ -1849,58 +2273,46 @@ function renderNearby(
                 </div>
 
 
-                ${
+                <div class="service-grid">
 
-                    items.length === 0
 
-                        ? `
+                    ${
+                        items.length === 0
 
-                            <div class="empty">
+                            ? `
 
-                                <div class="big-icon">
-                                    📍
+                                <div class="empty">
+
+                                    <div class="big-icon">
+                                        📍
+                                    </div>
+
+                                    <h2>
+                                        No services found
+                                    </h2>
+
                                 </div>
 
-                                <h2>
-                                    No services found
-                                </h2>
+                            `
 
-                                <p class="muted">
-                                    Try another category.
-                                </p>
-
-                            </div>
-
-                        `
-
-                        : `
-
-                            <div class="service-grid">
-
-                                ${
-
-                                    items
-                                        .map(
-                                            ({ service, distance }) =>
-                                                serviceCard(
-                                                    service,
-                                                    distance
-                                                )
+                            : items
+                                .map(
+                                    item =>
+                                        renderServiceCard(
+                                            item.service,
+                                            item.distance
                                         )
-                                        .join("")
+                                )
+                                .join("")
+                    }
 
-                                }
 
-                            </div>
-
-                        `
-
-                }
+                </div>
 
 
             </div>
 
-        </div>
+        </main>
 
     `;
 
@@ -1912,45 +2324,37 @@ function renderNearby(
         .querySelectorAll(
             "[data-category]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-                    navigate(
-                        "user/nearby",
-                        {
-                            category:
-                                button.dataset.category
-                        }
-                    );
+                        navigate(
+                            "user/nearby",
+                            {
+                                category:
+                                    button.dataset
+                                        .category
+                            }
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
-
-
-    if (
-        !geo.coords &&
-        !geo.loading &&
-        !geo.error
-    ) {
-
-        requestLocation();
-
-    }
+            }
+        );
 }
 
 
-function serviceCard(
+function renderServiceCard(
     service,
     distance
 ) {
 
-    const info =
-        categoryInfo(
+    const category =
+        getCategoryInfo(
             service.type
         );
 
@@ -1965,7 +2369,7 @@ function serviceCard(
 
                 <div class="service-icon">
 
-                    ${info.icon}
+                    ${category.icon}
 
                 </div>
 
@@ -1985,7 +2389,7 @@ function serviceCard(
                     <div class="service-meta">
 
                         ${escapeHtml(
-                            info.label
+                            category.label
                         )}
 
                     </div>
@@ -2001,7 +2405,6 @@ function serviceCard(
 
 
                     ${
-
                         distance !== null
 
                             ? `
@@ -2012,7 +2415,6 @@ function serviceCard(
                                     ${formatDistance(
                                         distance
                                     )}
-                                    away
 
                                 </div>
 
@@ -2031,15 +2433,15 @@ function serviceCard(
 
             <div
                 class="btn-row"
-                style="margin-top:14px"
+                style="margin-top:15px"
             >
 
 
                 <a
-                    class="btn btn-primary btn-sm"
-                    href="tel:${escapeHtml(
+                    href="tel:${encodeURIComponent(
                         service.phone
                     )}"
+                    class="btn btn-primary btn-sm"
                 >
 
                     📞 Call
@@ -2048,13 +2450,13 @@ function serviceCard(
 
 
                 <a
-                    class="btn btn-sm"
-                    target="_blank"
-                    rel="noopener"
-                    href="${mapsDirections(
+                    href="${directionsUrl(
                         service.lat,
                         service.lng
                     )}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-sm"
                 >
 
                     🗺️ Directions
@@ -2063,13 +2465,13 @@ function serviceCard(
 
 
                 <a
-                    class="btn btn-sm"
-                    target="_blank"
-                    rel="noopener"
-                    href="${mapsLocation(
+                    href="${mapUrl(
                         service.lat,
                         service.lng
                     )}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-sm"
                 >
 
                     📍 Map
@@ -2087,20 +2489,24 @@ function serviceCard(
 
 
 /* =========================================================
-   17. RAISE EMERGENCY REQUEST
+   19. RAISE REQUEST
    ========================================================= */
 
 function renderRaise() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     let selectedCategory =
         "ambulance";
 
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    app.innerHTML = `
 
-        <div class="page">
+        <main class="page">
 
             <div class="container">
 
@@ -2109,13 +2515,13 @@ function renderRaise() {
 
 
                     <h1>
-                        Raise emergency request
+                        Raise Emergency Request
                     </h1>
 
 
                     <p class="sub">
 
-                        Your browser location
+                        Your current location
                         will be attached to the request.
 
                     </p>
@@ -2129,7 +2535,6 @@ function renderRaise() {
 
                         <div class="field">
 
-
                             <label>
                                 Emergency type
                             </label>
@@ -2140,38 +2545,40 @@ function renderRaise() {
                                 id="requestCategories"
                             >
 
-
                                 ${
 
                                     CATEGORIES
                                         .map(
                                             category => `
 
-                                            <button
-                                                type="button"
-                                                class="pill ${
-                                                    category.type ===
-                                                    selectedCategory
-                                                        ? "active"
-                                                        : ""
-                                                }"
-                                                data-type="${category.type}"
-                                            >
+                                                <button
+                                                    type="button"
+                                                    class="pill ${
+                                                        category.type ===
+                                                        selectedCategory
+                                                            ? "active"
+                                                            : ""
+                                                    }"
+                                                    data-type="${category.type}"
+                                                >
 
-                                                ${category.icon}
-                                                ${category.label}
+                                                    ${
+                                                        category.icon
+                                                    }
 
-                                            </button>
+                                                    ${
+                                                        category.label
+                                                    }
 
-                                        `
+                                                </button>
+
+                                            `
                                         )
                                         .join("")
 
                                 }
 
-
                             </div>
-
 
                         </div>
 
@@ -2187,6 +2594,7 @@ function renderRaise() {
                             <input
                                 id="requestName"
                                 required
+                                maxlength="100"
                             >
 
                         </div>
@@ -2204,6 +2612,7 @@ function renderRaise() {
                                 id="requestPhone"
                                 type="tel"
                                 required
+                                maxlength="30"
                             >
 
                         </div>
@@ -2214,16 +2623,14 @@ function renderRaise() {
                             <label
                                 for="requestDescription"
                             >
-                                What's happening?
+                                Emergency description
                             </label>
-
 
                             <textarea
                                 id="requestDescription"
                                 maxlength="500"
-                                placeholder="Briefly describe the emergency..."
+                                placeholder="Briefly describe what is happening..."
                             ></textarea>
-
 
                         </div>
 
@@ -2240,7 +2647,7 @@ function renderRaise() {
                             type="submit"
                         >
 
-                            🚨 Submit request
+                            🚨 Submit Emergency Request
 
                         </button>
 
@@ -2253,7 +2660,7 @@ function renderRaise() {
 
             </div>
 
-        </div>
+        </main>
 
     `;
 
@@ -2265,37 +2672,38 @@ function renderRaise() {
         .querySelectorAll(
             "#requestCategories [data-type]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-                    selectedCategory =
-                        button.dataset.type;
+                        selectedCategory =
+                            button.dataset.type;
 
 
-                    document
-                        .querySelectorAll(
-                            "#requestCategories [data-type]"
-                        )
-                        .forEach(item => {
+                        document
+                            .querySelectorAll(
+                                "#requestCategories [data-type]"
+                            )
+                            .forEach(
+                                item => {
 
-                            item.classList.toggle(
+                                    item.classList.toggle(
+                                        "active",
+                                        item.dataset.type ===
+                                        selectedCategory
+                                    );
 
-                                "active",
-
-                                item.dataset.type ===
-                                selectedCategory
-
+                                }
                             );
 
-                        });
+                    }
+                );
 
-                }
-            );
-
-        });
+            }
+        );
 
 
     document
@@ -2304,7 +2712,7 @@ function renderRaise() {
         )
         .addEventListener(
             "submit",
-            event => {
+            function (event) {
 
                 event.preventDefault();
 
@@ -2348,16 +2756,31 @@ function renderRaise() {
                         .trim();
 
 
+                if (!name || !phone) {
+
+                    showToast(
+                        "Please enter your name and phone.",
+                        true
+                    );
+
+                    return;
+
+                }
+
+
                 createRequest({
 
                     category:
                         selectedCategory,
 
-                    name,
+                    name:
+                        name,
 
-                    phone,
+                    phone:
+                        phone,
 
-                    description,
+                    description:
+                        description,
 
                     lat:
                         geo.coords.lat,
@@ -2379,31 +2802,20 @@ function renderRaise() {
 
             }
         );
-
-
-    if (
-        !geo.coords &&
-        !geo.loading &&
-        !geo.error
-    ) {
-
-        requestLocation();
-
-    }
 }
 
 
 /* =========================================================
-   18. REQUEST TIMELINE
+   20. REQUEST TIMELINE
    ========================================================= */
 
-function requestTimeline(
-    status
+function renderTimeline(
+    currentStatus
 ) {
 
     const currentIndex =
         REQUEST_STATUSES.indexOf(
-            status
+            currentStatus
         );
 
 
@@ -2411,14 +2823,13 @@ function requestTimeline(
 
         <div class="timeline">
 
-
             ${
 
                 REQUEST_STATUSES
                     .map(
-                        (item, index) => {
+                        (status, index) => {
 
-                            const completed =
+                            const done =
                                 index <=
                                 currentIndex;
 
@@ -2427,16 +2838,17 @@ function requestTimeline(
 
                                 <div class="step">
 
+
                                     <div
                                         class="dot ${
-                                            completed
+                                            done
                                                 ? "done"
                                                 : ""
                                         }"
                                     >
 
                                         ${
-                                            completed
+                                            done
                                                 ? "✓"
                                                 : index + 1
                                         }
@@ -2444,15 +2856,15 @@ function requestTimeline(
                                     </div>
 
 
-                                    <div>
-                                        ${item}
-                                    </div>
+                                    <span>
+                                        ${status}
+                                    </span>
+
 
                                 </div>
 
 
                                 ${
-
                                     index <
                                     REQUEST_STATUSES.length - 1
 
@@ -2470,7 +2882,6 @@ function requestTimeline(
                                         `
 
                                         : ""
-
                                 }
 
                             `;
@@ -2481,7 +2892,6 @@ function requestTimeline(
 
             }
 
-
         </div>
 
     `;
@@ -2489,20 +2899,24 @@ function requestTimeline(
 
 
 /* =========================================================
-   19. USER REQUESTS
+   21. USER REQUESTS
    ========================================================= */
 
 function renderMyRequests() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     const requests =
         getRequests();
 
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    app.innerHTML = `
 
-        <div class="page">
+        <main class="page">
 
             <div class="container">
 
@@ -2510,20 +2924,17 @@ function renderMyRequests() {
                 <div class="page-head">
 
                     <h1>
-                        My requests
+                        My Requests
                     </h1>
 
-                    <div class="sub">
-
+                    <p class="sub">
                         Track your emergency requests.
-
-                    </div>
+                    </p>
 
                 </div>
 
 
                 ${
-
                     requests.length === 0
 
                         ? `
@@ -2539,20 +2950,18 @@ function renderMyRequests() {
                                 </h2>
 
                                 <p class="muted">
-
-                                    Your emergency requests
-                                    will appear here.
-
+                                    Your requests will
+                                    appear here.
                                 </p>
 
 
                                 <a
-                                    class="btn btn-primary"
                                     href="#/user/raise"
+                                    class="btn btn-primary"
                                     style="margin-top:15px"
                                 >
 
-                                    Raise a request
+                                    Raise Request
 
                                 </a>
 
@@ -2570,8 +2979,8 @@ function renderMyRequests() {
                                         .map(
                                             request => {
 
-                                                const info =
-                                                    categoryInfo(
+                                                const category =
+                                                    getCategoryInfo(
                                                         request.category
                                                     );
 
@@ -2591,19 +3000,21 @@ function renderMyRequests() {
                                                                 <h2>
 
                                                                     ${
-                                                                        info.icon
+                                                                        category.icon
                                                                     }
 
                                                                     ${
                                                                         escapeHtml(
-                                                                            info.label
+                                                                            category.label
                                                                         )
                                                                     }
 
                                                                 </h2>
 
 
-                                                                <div class="muted">
+                                                                <div
+                                                                    class="muted"
+                                                                >
 
                                                                     ${
                                                                         formatDate(
@@ -2617,9 +3028,8 @@ function renderMyRequests() {
 
 
                                                             <span
-                                                                class="status ${request.status.replaceAll(
-                                                                    " ",
-                                                                    "."
+                                                                class="status ${statusClass(
+                                                                    request.status
                                                                 )}"
                                                             >
 
@@ -2636,7 +3046,7 @@ function renderMyRequests() {
 
 
                                                         <p
-                                                            style="margin-top:10px"
+                                                            style="margin-top:12px"
                                                         >
 
                                                             ${
@@ -2649,9 +3059,8 @@ function renderMyRequests() {
                                                         </p>
 
 
-                                                        <div
+                                                        <p
                                                             class="muted"
-                                                            style="margin-top:7px"
                                                         >
 
                                                             Location:
@@ -2668,14 +3077,12 @@ function renderMyRequests() {
                                                                 ).toFixed(4)
                                                             }
 
-                                                        </div>
+                                                        </p>
 
 
-                                                        ${
-                                                            requestTimeline(
-                                                                request.status
-                                                            )
-                                                        }
+                                                        ${renderTimeline(
+                                                            request.status
+                                                        )}
 
 
                                                     </article>
@@ -2691,23 +3098,27 @@ function renderMyRequests() {
                             </div>
 
                         `
-
                 }
 
 
             </div>
 
-        </div>
+        </main>
 
     `;
 }
 
 
 /* =========================================================
-   20. SOS CONTACTS
+   22. SOS
    ========================================================= */
 
 function renderSos() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
 
 
     function paint() {
@@ -2716,11 +3127,9 @@ function renderSos() {
             getContacts();
 
 
-        document.getElementById(
-            "app"
-        ).innerHTML = `
+        app.innerHTML = `
 
-            <div class="page">
+            <main class="page">
 
                 <div class="container">
 
@@ -2731,12 +3140,12 @@ function renderSos() {
                             Emergency SOS
                         </h1>
 
-                        <div class="sub">
+                        <p class="sub">
 
                             Save trusted contacts
                             and send your location.
 
-                        </div>
+                        </p>
 
                     </div>
 
@@ -2749,9 +3158,11 @@ function renderSos() {
                             style="margin:0"
                         >
 
+
                             <h2>
-                                Add trusted contact
+                                Add Trusted Contact
                             </h2>
+
 
                             <hr>
 
@@ -2770,6 +3181,7 @@ function renderSos() {
                                     <input
                                         id="contactName"
                                         required
+                                        maxlength="100"
                                     >
 
                                 </div>
@@ -2787,6 +3199,7 @@ function renderSos() {
                                         id="contactPhone"
                                         type="tel"
                                         required
+                                        maxlength="30"
                                     >
 
                                 </div>
@@ -2794,9 +3207,10 @@ function renderSos() {
 
                                 <button
                                     class="btn btn-primary"
+                                    type="submit"
                                 >
 
-                                    Add contact
+                                    Add Contact
 
                                 </button>
 
@@ -2810,25 +3224,21 @@ function renderSos() {
                         <div>
 
 
-                            <div id="sosLocation">
-
-                                ${locationBar()}
-
-                            </div>
+                            ${locationBar()}
 
 
                             <h2>
-                                Trusted contacts
+                                Trusted Contacts
                             </h2>
 
 
                             <div
+                                class="stack"
                                 style="margin-top:12px"
                             >
 
 
                                 ${
-
                                     contacts.length === 0
 
                                         ? `
@@ -2840,98 +3250,90 @@ function renderSos() {
                                                 </div>
 
                                                 <p>
-                                                    No contacts added.
+                                                    No trusted contacts yet.
                                                 </p>
 
                                             </div>
 
                                         `
 
-                                        : `
+                                        : contacts
+                                            .map(
+                                                contact => `
 
-                                            <div class="stack">
+                                                    <div
+                                                        class="card"
+                                                    >
 
-                                                ${
+                                                        <div
+                                                            class="flex-between"
+                                                        >
 
-                                                    contacts
-                                                        .map(
-                                                            contact => `
+                                                            <div>
+
+                                                                <strong>
+
+                                                                    ${
+                                                                        escapeHtml(
+                                                                            contact.name
+                                                                        )
+                                                                    }
+
+                                                                </strong>
+
 
                                                                 <div
-                                                                    class="card flex-between"
+                                                                    class="muted"
                                                                 >
 
-
-                                                                    <div>
-
-                                                                        <strong>
-
-                                                                            ${
-                                                                                escapeHtml(
-                                                                                    contact.name
-                                                                                )
-                                                                            }
-
-                                                                        </strong>
-
-
-                                                                        <div class="muted">
-
-                                                                            ${
-                                                                                escapeHtml(
-                                                                                    contact.phone
-                                                                                )
-                                                                            }
-
-                                                                        </div>
-
-                                                                    </div>
-
-
-                                                                    <div
-                                                                        class="btn-row"
-                                                                    >
-
-
-                                                                        <a
-                                                                            class="btn btn-primary btn-sm"
-                                                                            href="${createSmsLink(
-                                                                                contact.phone,
-                                                                                contact.name,
-                                                                                geo.coords
-                                                                            )}"
-                                                                        >
-
-                                                                            ✉ Send SOS
-
-                                                                        </a>
-
-
-                                                                        <button
-                                                                            class="btn btn-danger btn-sm"
-                                                                            data-delete-contact="${contact.id}"
-                                                                        >
-
-                                                                            🗑
-
-                                                                        </button>
-
-
-                                                                    </div>
-
+                                                                    ${
+                                                                        escapeHtml(
+                                                                            contact.phone
+                                                                        )
+                                                                    }
 
                                                                 </div>
 
-                                                            `
-                                                        )
-                                                        .join("")
+                                                            </div>
 
-                                                }
 
-                                            </div>
+                                                            <div
+                                                                class="btn-row"
+                                                            >
 
-                                        `
+                                                                <a
+                                                                    class="btn btn-primary btn-sm"
+                                                                    href="${createSmsLink(
+                                                                        contact.phone,
+                                                                        contact.name,
+                                                                        geo.coords
+                                                                    )}"
+                                                                >
 
+                                                                    ✉ Send SOS
+
+                                                                </a>
+
+
+                                                                <button
+                                                                    class="btn btn-danger btn-sm"
+                                                                    type="button"
+                                                                    data-delete-contact="${contact.id}"
+                                                                >
+
+                                                                    Delete
+
+                                                                </button>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                `
+                                            )
+                                            .join("")
                                 }
 
 
@@ -2946,7 +3348,7 @@ function renderSos() {
 
                 </div>
 
-            </div>
+            </main>
 
         `;
 
@@ -2954,115 +3356,114 @@ function renderSos() {
         attachLocationButton();
 
 
-        document
-            .getElementById(
+        const form =
+            document.getElementById(
                 "contactForm"
-            )
-            .addEventListener(
-                "submit",
-                event => {
-
-                    event.preventDefault();
+            );
 
 
-                    const name =
-                        document
-                            .getElementById(
-                                "contactName"
-                            )
-                            .value
-                            .trim();
+        form.addEventListener(
+            "submit",
+            function (event) {
+
+                event.preventDefault();
 
 
-                    const phone =
-                        document
-                            .getElementById(
-                                "contactPhone"
-                            )
-                            .value
-                            .trim();
+                const name =
+                    document
+                        .getElementById(
+                            "contactName"
+                        )
+                        .value
+                        .trim();
 
 
-                    if (!name || !phone) {
-
-                        showToast(
-                            "Name and phone are required.",
-                            true
-                        );
-
-                        return;
-
-                    }
+                const phone =
+                    document
+                        .getElementById(
+                            "contactPhone"
+                        )
+                        .value
+                        .trim();
 
 
-                    addContact(
-                        name,
-                        phone
-                    );
-
+                if (!name || !phone) {
 
                     showToast(
-                        "Contact added."
+                        "Please enter name and phone.",
+                        true
                     );
 
-
-                    paint();
+                    return;
 
                 }
-            );
+
+
+                addContact(
+                    name,
+                    phone
+                );
+
+
+                showToast(
+                    "Contact added."
+                );
+
+
+                paint();
+
+            }
+        );
 
 
         document
             .querySelectorAll(
                 "[data-delete-contact]"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    "click",
-                    () => {
+                    button.addEventListener(
+                        "click",
+                        function () {
 
-                        deleteContact(
-                            button.dataset
-                                .deleteContact
-                        );
-
-
-                        showToast(
-                            "Contact removed."
-                        );
+                            deleteContact(
+                                button.dataset
+                                    .deleteContact
+                            );
 
 
-                        paint();
+                            showToast(
+                                "Contact deleted."
+                            );
 
-                    }
-                );
 
-            });
+                            paint();
+
+                        }
+                    );
+
+                }
+            );
 
     }
 
 
     paint();
-
-
-    if (
-        !geo.coords &&
-        !geo.loading &&
-        !geo.error
-    ) {
-
-        requestLocation();
-
-    }
 }
 
 
 /* =========================================================
-   21. ADMIN DASHBOARD
+   23. ADMIN DASHBOARD
    ========================================================= */
 
 function renderAdminDashboard() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     const requests =
         getRequests();
@@ -3072,21 +3473,22 @@ function renderAdminDashboard() {
         getServices();
 
 
-    const countByStatus =
-        status =>
+    function countStatus(
+        status
+    ) {
 
-            requests.filter(
-                request =>
-                    request.status ===
-                    status
-            ).length;
+        return requests.filter(
+            request =>
+                request.status ===
+                status
+        ).length;
+
+    }
 
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    app.innerHTML = `
 
-        <div class="page">
+        <main class="page">
 
             <div class="container">
 
@@ -3097,12 +3499,11 @@ function renderAdminDashboard() {
                         Admin Dashboard
                     </h1>
 
-                    <div class="sub">
+                    <p class="sub">
 
-                        Overview of the locally
-                        stored system data.
+                        Overview of EmergencyConnect.
 
-                    </div>
+                    </p>
 
                 </div>
 
@@ -3113,13 +3514,11 @@ function renderAdminDashboard() {
                     <div class="stat">
 
                         <div class="number">
-
                             ${requests.length}
-
                         </div>
 
                         <div class="muted">
-                            Total requests
+                            Total Requests
                         </div>
 
                     </div>
@@ -3134,20 +3533,12 @@ function renderAdminDashboard() {
                                     <div class="stat">
 
                                         <div class="number">
-
-                                            ${
-                                                countByStatus(
-                                                    status
-                                                )
-                                            }
-
+                                            ${countStatus(status)}
                                         </div>
 
-
                                         <span
-                                            class="status ${status.replaceAll(
-                                                " ",
-                                                "."
+                                            class="status ${statusClass(
+                                                status
                                             )}"
                                         >
 
@@ -3168,61 +3559,73 @@ function renderAdminDashboard() {
 
 
                 <div
-                    class="card"
-                    style="margin-top:18px"
+                    class="grid-2"
+                    style="margin-top:20px"
                 >
 
-                    <div
-                        class="flex-between"
+
+                    <a
+                        href="#/admin/requests"
+                        class="card"
                     >
 
+                        <h2>
+                            🚨 Manage Requests
+                        </h2>
 
-                        <div>
+                        <p class="muted">
 
-                            <h2>
-                                Services
-                            </h2>
+                            View and update
+                            emergency requests.
 
-                            <p class="muted">
+                        </p>
 
-                                ${services.length}
-                                service listings.
-
-                            </p>
-
-                        </div>
+                    </a>
 
 
-                        <a
-                            class="btn btn-sm"
-                            href="#/admin/services"
-                        >
+                    <a
+                        href="#/admin/services"
+                        class="card"
+                    >
 
-                            Manage services
+                        <h2>
+                            🏥 Manage Services
+                        </h2>
 
-                        </a>
+                        <p class="muted">
 
+                            ${services.length}
+                            services currently available.
 
-                    </div>
+                        </p>
+
+                    </a>
+
 
                 </div>
 
 
             </div>
 
-        </div>
+        </main>
 
     `;
 }
 
 
 /* =========================================================
-   22. ADMIN REQUESTS
+   24. ADMIN REQUESTS
    ========================================================= */
 
 function renderAdminRequests() {
 
-    let selectedStatus =
+    const app =
+        document.getElementById(
+            "app"
+        );
+
+
+    let filter =
         "All";
 
 
@@ -3233,26 +3636,20 @@ function renderAdminRequests() {
 
 
         const requests =
-
-            selectedStatus === "All"
+            filter === "All"
 
                 ? allRequests
 
                 : allRequests.filter(
-
                     request =>
-
                         request.status ===
-                        selectedStatus
-
+                        filter
                 );
 
 
-        document.getElementById(
-            "app"
-        ).innerHTML = `
+        app.innerHTML = `
 
-            <div class="page">
+            <main class="page">
 
                 <div class="container">
 
@@ -3263,33 +3660,32 @@ function renderAdminRequests() {
                             Emergency Requests
                         </h1>
 
-                        <div class="sub">
+                        <p class="sub">
 
                             Review and update
                             incoming requests.
 
-                        </div>
+                        </p>
 
                     </div>
 
 
                     <div
                         class="pills"
-                        style="margin-bottom:15px"
+                        style="margin-bottom:20px"
                     >
 
 
                         <button
                             class="pill ${
-                                selectedStatus === "All"
+                                filter === "All"
                                     ? "active"
                                     : ""
                             }"
+                            type="button"
                             data-filter="All"
                         >
-
                             All
-
                         </button>
 
 
@@ -3301,11 +3697,12 @@ function renderAdminRequests() {
 
                                         <button
                                             class="pill ${
-                                                selectedStatus ===
+                                                filter ===
                                                 status
                                                     ? "active"
                                                     : ""
                                             }"
+                                            type="button"
                                             data-filter="${status}"
                                         >
 
@@ -3324,7 +3721,6 @@ function renderAdminRequests() {
 
 
                     ${
-
                         requests.length === 0
 
                             ? `
@@ -3353,8 +3749,8 @@ function renderAdminRequests() {
                                             .map(
                                                 request => {
 
-                                                    const info =
-                                                        categoryInfo(
+                                                    const category =
+                                                        getCategoryInfo(
                                                             request.category
                                                         );
 
@@ -3376,31 +3772,32 @@ function renderAdminRequests() {
                                                                     <h2>
 
                                                                         ${
-                                                                            info.icon
+                                                                            category.icon
                                                                         }
 
                                                                         ${
                                                                             escapeHtml(
-                                                                                info.label
+                                                                                category.label
                                                                             )
                                                                         }
 
                                                                     </h2>
 
 
-                                                                    <div>
+                                                                    <strong>
 
-                                                                        <strong>
+                                                                        ${
+                                                                            escapeHtml(
+                                                                                request.name
+                                                                            )
+                                                                        }
 
-                                                                            ${
-                                                                                escapeHtml(
-                                                                                    request.name
-                                                                                )
-                                                                            }
+                                                                    </strong>
 
-                                                                        </strong>
 
-                                                                        ·
+                                                                    <div
+                                                                        class="muted"
+                                                                    >
 
                                                                         ${
                                                                             escapeHtml(
@@ -3440,8 +3837,8 @@ function renderAdminRequests() {
                                                                                     <option
                                                                                         value="${status}"
                                                                                         ${
-                                                                                            status ===
-                                                                                            request.status
+                                                                                            request.status ===
+                                                                                            status
                                                                                                 ? "selected"
                                                                                                 : ""
                                                                                         }
@@ -3464,7 +3861,7 @@ function renderAdminRequests() {
 
 
                                                             <p
-                                                                style="margin-top:10px"
+                                                                style="margin-top:12px"
                                                             >
 
                                                                 ${
@@ -3479,18 +3876,18 @@ function renderAdminRequests() {
 
                                                             <div
                                                                 class="btn-row"
-                                                                style="margin-top:10px"
+                                                                style="margin-top:12px"
                                                             >
 
 
                                                                 <a
-                                                                    class="btn btn-sm"
-                                                                    target="_blank"
-                                                                    rel="noopener"
-                                                                    href="${mapsLocation(
+                                                                    href="${mapUrl(
                                                                         request.lat,
                                                                         request.lng
                                                                     )}"
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    class="btn btn-sm"
                                                                 >
 
                                                                     📍 Location
@@ -3499,13 +3896,13 @@ function renderAdminRequests() {
 
 
                                                                 <a
-                                                                    class="btn btn-primary btn-sm"
-                                                                    href="tel:${escapeHtml(
+                                                                    href="tel:${encodeURIComponent(
                                                                         request.phone
                                                                     )}"
+                                                                    class="btn btn-primary btn-sm"
                                                                 >
 
-                                                                    📞 Call user
+                                                                    📞 Call User
 
                                                                 </a>
 
@@ -3526,13 +3923,12 @@ function renderAdminRequests() {
                                 </div>
 
                             `
-
                     }
 
 
                 </div>
 
-            </div>
+            </main>
 
         `;
 
@@ -3541,68 +3937,78 @@ function renderAdminRequests() {
             .querySelectorAll(
                 "[data-filter]"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    "click",
-                    () => {
+                    button.addEventListener(
+                        "click",
+                        function () {
 
-                        selectedStatus =
-                            button.dataset.filter;
+                            filter =
+                                button.dataset
+                                    .filter;
 
-                        paint();
+                            paint();
 
-                    }
-                );
+                        }
+                    );
 
-            });
+                }
+            );
 
 
         document
             .querySelectorAll(
-                ".status-select"
+                "[data-request-id]"
             )
-            .forEach(select => {
+            .forEach(
+                select => {
 
-                select.addEventListener(
-                    "change",
-                    () => {
+                    select.addEventListener(
+                        "change",
+                        function () {
 
-                        updateRequestStatus(
+                            updateRequestStatus(
 
-                            select.dataset
-                                .requestId,
+                                select.dataset
+                                    .requestId,
 
-                            select.value
+                                select.value
 
-                        );
-
-
-                        showToast(
-                            "Request status updated."
-                        );
+                            );
 
 
-                        paint();
+                            showToast(
+                                "Request status updated."
+                            );
 
-                    }
-                );
 
-            });
+                            paint();
+
+                        }
+                    );
+
+                }
+            );
 
     }
 
 
     paint();
-
 }
 
 
 /* =========================================================
-   23. ADMIN SERVICES
+   25. ADMIN SERVICES
    ========================================================= */
 
 function renderAdminServices() {
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
 
     let editingId = null;
 
@@ -3613,18 +4019,16 @@ function renderAdminServices() {
             getServices();
 
 
-        document.getElementById(
-            "app"
-        ).innerHTML = `
+        app.innerHTML = `
 
-            <div class="page">
+            <main class="page">
 
                 <div class="container">
 
 
                     <div
                         class="flex-between"
-                        style="margin-bottom:15px"
+                        style="margin-bottom:20px"
                     >
 
 
@@ -3634,22 +4038,23 @@ function renderAdminServices() {
                                 Manage Services
                             </h1>
 
-                            <div class="sub">
+                            <p class="sub">
 
                                 Add, edit or delete
-                                emergency services.
+                                emergency service listings.
 
-                            </div>
+                            </p>
 
                         </div>
 
 
                         <button
+                            id="newServiceButton"
                             class="btn btn-primary"
-                            id="newService"
+                            type="button"
                         >
 
-                            ＋ New service
+                            + New Service
 
                         </button>
 
@@ -3657,241 +4062,231 @@ function renderAdminServices() {
                     </div>
 
 
-                    ${
-
-                        services.length === 0
-
-                            ? `
-
-                                <div class="empty">
-
-                                    <div class="big-icon">
-                                        🏢
-                                    </div>
-
-                                    <h2>
-                                        No services
-                                    </h2>
-
-                                </div>
-
-                            `
-
-                            : `
-
-                                <div class="table-wrap">
-
-                                    <table>
+                    <div class="table-wrap">
 
 
-                                        <thead>
+                        <table>
+
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Service
+                                    </th>
+
+                                    <th>
+                                        Category
+                                    </th>
+
+                                    <th>
+                                        Phone
+                                    </th>
+
+                                    <th>
+                                        Coordinates
+                                    </th>
+
+                                    <th>
+                                        Actions
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+
+                                ${
+
+                                    services.length === 0
+
+                                        ? `
 
                                             <tr>
 
-                                                <th>
-                                                    Service
-                                                </th>
-
-                                                <th>
-                                                    Category
-                                                </th>
-
-                                                <th>
-                                                    Phone
-                                                </th>
-
-                                                <th>
-                                                    Coordinates
-                                                </th>
-
-                                                <th>
-                                                    Actions
-                                                </th>
+                                                <td
+                                                    colspan="5"
+                                                >
+                                                    No services found.
+                                                </td>
 
                                             </tr>
 
-                                        </thead>
+                                        `
+
+                                        : services
+                                            .map(
+                                                service => {
+
+                                                    const category =
+                                                        getCategoryInfo(
+                                                            service.type
+                                                        );
 
 
-                                        <tbody>
+                                                    return `
 
-                                            ${
-
-                                                services
-                                                    .map(
-                                                        service => {
-
-                                                            const info =
-                                                                categoryInfo(
-                                                                    service.type
-                                                                );
+                                                        <tr>
 
 
-                                                            return `
+                                                            <td>
 
-                                                                <tr>
+                                                                <strong>
 
+                                                                    ${
+                                                                        escapeHtml(
+                                                                            service.name
+                                                                        )
+                                                                    }
 
-                                                                    <td>
-
-                                                                        <strong>
-
-                                                                            ${
-                                                                                escapeHtml(
-                                                                                    service.name
-                                                                                )
-                                                                            }
-
-                                                                        </strong>
+                                                                </strong>
 
 
-                                                                        <div
-                                                                            class="muted"
-                                                                        >
+                                                                <div
+                                                                    class="muted"
+                                                                >
 
-                                                                            ${
-                                                                                escapeHtml(
-                                                                                    service.address
-                                                                                )
-                                                                            }
+                                                                    ${
+                                                                        escapeHtml(
+                                                                            service.address
+                                                                        )
+                                                                    }
 
-                                                                        </div>
+                                                                </div>
 
-                                                                    </td>
-
-
-                                                                    <td>
-
-                                                                        ${
-                                                                            info.icon
-                                                                        }
-
-                                                                        ${
-                                                                            escapeHtml(
-                                                                                info.label
-                                                                            )
-                                                                        }
-
-                                                                    </td>
+                                                            </td>
 
 
-                                                                    <td>
+                                                            <td>
 
-                                                                        ${
-                                                                            escapeHtml(
-                                                                                service.phone
-                                                                            )
-                                                                        }
+                                                                ${
+                                                                    category.icon
+                                                                }
 
-                                                                    </td>
+                                                                ${
+                                                                    escapeHtml(
+                                                                        category.label
+                                                                    )
+                                                                }
 
-
-                                                                    <td>
-
-                                                                        ${
-                                                                            Number(
-                                                                                service.lat
-                                                                            ).toFixed(4)
-                                                                        },
-
-                                                                        ${
-                                                                            Number(
-                                                                                service.lng
-                                                                            ).toFixed(4)
-                                                                        }
-
-                                                                    </td>
+                                                            </td>
 
 
-                                                                    <td>
+                                                            <td>
 
-                                                                        <div
-                                                                            class="btn-row"
-                                                                        >
+                                                                ${
+                                                                    escapeHtml(
+                                                                        service.phone
+                                                                    )
+                                                                }
 
-
-                                                                            <button
-                                                                                class="btn btn-sm"
-                                                                                data-edit-service="${service.id}"
-                                                                            >
-
-                                                                                ✎ Edit
-
-                                                                            </button>
+                                                            </td>
 
 
-                                                                            <button
-                                                                                class="btn btn-danger btn-sm"
-                                                                                data-delete-service="${service.id}"
-                                                                            >
+                                                            <td>
 
-                                                                                🗑 Delete
+                                                                ${
+                                                                    Number(
+                                                                        service.lat
+                                                                    ).toFixed(4)
+                                                                },
 
-                                                                            </button>
+                                                                ${
+                                                                    Number(
+                                                                        service.lng
+                                                                    ).toFixed(4)
+                                                                }
 
-
-                                                                        </div>
-
-                                                                    </td>
-
-
-                                                                </tr>
-
-                                                            `;
-
-                                                        }
-                                                    )
-                                                    .join("")
-
-                                            }
-
-                                        </tbody>
+                                                            </td>
 
 
-                                    </table>
+                                                            <td>
 
-                                </div>
+                                                                <div
+                                                                    class="btn-row"
+                                                                >
 
-                            `
+                                                                    <button
+                                                                        class="btn btn-sm"
+                                                                        type="button"
+                                                                        data-edit-service="${service.id}"
+                                                                    >
 
-                    }
+                                                                        Edit
+
+                                                                    </button>
+
+
+                                                                    <button
+                                                                        class="btn btn-danger btn-sm"
+                                                                        type="button"
+                                                                        data-delete-service="${service.id}"
+                                                                    >
+
+                                                                        Delete
+
+                                                                    </button>
+
+                                                                </div>
+
+                                                            </td>
+
+
+                                                        </tr>
+
+                                                    `;
+
+                                                }
+                                            )
+                                            .join("")
+
+                                }
+
+
+                            </tbody>
+
+
+                        </table>
+
+
+                    </div>
 
 
                     ${
-
                         editingId !== null
 
-                            ? serviceModal(
-
-                                getServices().find(
-
-                                    service =>
-                                        service.id ===
-                                        editingId
-
-                                )
-
+                            ? renderServiceModal(
+                                editingId === "new"
+                                    ? null
+                                    : services.find(
+                                        service =>
+                                            service.id ===
+                                            editingId
+                                    )
                             )
 
                             : ""
-
                     }
 
 
                 </div>
 
-            </div>
+            </main>
 
         `;
 
 
         document
             .getElementById(
-                "newService"
+                "newServiceButton"
             )
             .addEventListener(
                 "click",
-                () => {
+                function () {
 
                     editingId =
                         "new";
@@ -3906,69 +4301,69 @@ function renderAdminServices() {
             .querySelectorAll(
                 "[data-edit-service]"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    "click",
-                    () => {
+                    button.addEventListener(
+                        "click",
+                        function () {
 
-                        editingId =
-                            button.dataset
-                                .editService;
+                            editingId =
+                                button.dataset
+                                    .editService;
 
-                        paint();
+                            paint();
 
-                    }
-                );
+                        }
+                    );
 
-            });
+                }
+            );
 
 
         document
             .querySelectorAll(
                 "[data-delete-service]"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    "click",
-                    () => {
+                    button.addEventListener(
+                        "click",
+                        function () {
 
-                        const confirmed =
-                            confirm(
-                                "Delete this service?"
+                            const confirmed =
+                                window.confirm(
+                                    "Delete this service?"
+                                );
+
+
+                            if (!confirmed) {
+                                return;
+                            }
+
+
+                            deleteService(
+                                button.dataset
+                                    .deleteService
                             );
 
 
-                        if (!confirmed) {
+                            showToast(
+                                "Service deleted."
+                            );
 
-                            return;
+
+                            paint();
 
                         }
+                    );
+
+                }
+            );
 
 
-                        deleteService(
-                            button.dataset
-                                .deleteService
-                        );
-
-
-                        showToast(
-                            "Service deleted."
-                        );
-
-
-                        paint();
-
-                    }
-                );
-
-            });
-
-
-        attachServiceForm(
-            paint
-        );
+        attachServiceModalEvents();
 
     }
 
@@ -3976,18 +4371,20 @@ function renderAdminServices() {
     paint();
 
 
-    function serviceModal(
-        existing
+    function renderServiceModal(
+        service
     ) {
 
         const isNew =
-            !existing;
+            !service;
 
 
         return `
 
-            <div class="modal-backdrop">
-
+            <div
+                class="modal-backdrop"
+                id="serviceModal"
+            >
 
                 <div class="modal">
 
@@ -3996,27 +4393,26 @@ function renderAdminServices() {
                         class="flex-between"
                     >
 
-
                         <h2>
 
                             ${
                                 isNew
-                                    ? "Add service"
-                                    : "Edit service"
+                                    ? "Add Service"
+                                    : "Edit Service"
                             }
 
                         </h2>
 
 
                         <button
+                            id="closeServiceModal"
                             class="btn btn-sm"
-                            id="closeModal"
+                            type="button"
                         >
 
                             ✕
 
                         </button>
-
 
                     </div>
 
@@ -4029,16 +4425,22 @@ function renderAdminServices() {
 
                         <div class="field">
 
-                            <label>
+                            <label
+                                for="serviceName"
+                            >
                                 Name
                             </label>
 
                             <input
                                 id="serviceName"
                                 required
-                                value="${escapeHtml(
-                                    existing?.name || ""
-                                )}"
+                                maxlength="150"
+                                value="${
+                                    escapeHtml(
+                                        service?.name ||
+                                        ""
+                                    )
+                                }"
                             >
 
                         </div>
@@ -4046,7 +4448,9 @@ function renderAdminServices() {
 
                         <div class="field">
 
-                            <label>
+                            <label
+                                for="serviceType"
+                            >
                                 Category
                             </label>
 
@@ -4066,7 +4470,7 @@ function renderAdminServices() {
                                                     ${
                                                         category.type ===
                                                         (
-                                                            existing?.type ||
+                                                            service?.type ||
                                                             "hospital"
                                                         )
                                                             ? "selected"
@@ -4088,22 +4492,27 @@ function renderAdminServices() {
 
                             </select>
 
-
                         </div>
 
 
                         <div class="field">
 
-                            <label>
+                            <label
+                                for="servicePhone"
+                            >
                                 Phone
                             </label>
 
                             <input
                                 id="servicePhone"
                                 required
-                                value="${escapeHtml(
-                                    existing?.phone || ""
-                                )}"
+                                maxlength="50"
+                                value="${
+                                    escapeHtml(
+                                        service?.phone ||
+                                        ""
+                                    )
+                                }"
                             >
 
                         </div>
@@ -4111,16 +4520,22 @@ function renderAdminServices() {
 
                         <div class="field">
 
-                            <label>
+                            <label
+                                for="serviceAddress"
+                            >
                                 Address
                             </label>
 
                             <input
                                 id="serviceAddress"
                                 required
-                                value="${escapeHtml(
-                                    existing?.address || ""
-                                )}"
+                                maxlength="250"
+                                value="${
+                                    escapeHtml(
+                                        service?.address ||
+                                        ""
+                                    )
+                                }"
                             >
 
                         </div>
@@ -4131,7 +4546,9 @@ function renderAdminServices() {
 
                             <div class="field">
 
-                                <label>
+                                <label
+                                    for="serviceLat"
+                                >
                                     Latitude
                                 </label>
 
@@ -4139,9 +4556,11 @@ function renderAdminServices() {
                                     id="serviceLat"
                                     type="number"
                                     step="any"
+                                    min="-90"
+                                    max="90"
                                     required
                                     value="${
-                                        existing?.lat ??
+                                        service?.lat ??
                                         ""
                                     }"
                                 >
@@ -4151,7 +4570,9 @@ function renderAdminServices() {
 
                             <div class="field">
 
-                                <label>
+                                <label
+                                    for="serviceLng"
+                                >
                                     Longitude
                                 </label>
 
@@ -4159,9 +4580,11 @@ function renderAdminServices() {
                                     id="serviceLng"
                                     type="number"
                                     step="any"
+                                    min="-180"
+                                    max="180"
                                     required
                                     value="${
-                                        existing?.lng ??
+                                        service?.lng ??
                                         ""
                                     }"
                                 >
@@ -4179,8 +4602,8 @@ function renderAdminServices() {
 
                             ${
                                 isNew
-                                    ? "Add service"
-                                    : "Save changes"
+                                    ? "Add Service"
+                                    : "Save Changes"
                             }
 
                         </button>
@@ -4197,21 +4620,19 @@ function renderAdminServices() {
     }
 
 
-    function attachServiceForm(
-        paint
-    ) {
+    function attachServiceModalEvents() {
 
-        const close =
+        const closeButton =
             document.getElementById(
-                "closeModal"
+                "closeServiceModal"
             );
 
 
-        if (close) {
+        if (closeButton) {
 
-            close.addEventListener(
+            closeButton.addEventListener(
                 "click",
-                () => {
+                function () {
 
                     editingId =
                         null;
@@ -4231,15 +4652,13 @@ function renderAdminServices() {
 
 
         if (!form) {
-
             return;
-
         }
 
 
         form.addEventListener(
             "submit",
-            event => {
+            function (event) {
 
                 event.preventDefault();
 
@@ -4302,6 +4721,8 @@ function renderAdminServices() {
 
                     !data.name ||
 
+                    !data.type ||
+
                     !data.phone ||
 
                     !data.address ||
@@ -4317,7 +4738,41 @@ function renderAdminServices() {
                 ) {
 
                     showToast(
-                        "Please fill every field correctly.",
+                        "Please fill all fields correctly.",
+                        true
+                    );
+
+                    return;
+                }
+
+
+                let success;
+
+
+                if (
+                    editingId === "new"
+                ) {
+
+                    success =
+                        addService(
+                            data
+                        );
+
+                } else {
+
+                    success =
+                        updateService(
+                            editingId,
+                            data
+                        );
+
+                }
+
+
+                if (!success) {
+
+                    showToast(
+                        "Could not save service.",
                         true
                     );
 
@@ -4326,32 +4781,11 @@ function renderAdminServices() {
                 }
 
 
-                if (
+                showToast(
                     editingId === "new"
-                ) {
-
-                    addService(
-                        data
-                    );
-
-                    showToast(
-                        "Service added."
-                    );
-
-                }
-
-                else {
-
-                    updateService(
-                        editingId,
-                        data
-                    );
-
-                    showToast(
-                        "Service updated."
-                    );
-
-                }
+                        ? "Service added."
+                        : "Service updated."
+                );
 
 
                 editingId =
@@ -4369,16 +4803,20 @@ function renderAdminServices() {
 
 
 /* =========================================================
-   24. 404 PAGE
+   26. 404
    ========================================================= */
 
 function renderNotFound() {
 
-    document.getElementById(
-        "app"
-    ).innerHTML = `
+    const app =
+        document.getElementById(
+            "app"
+        );
 
-        <div class="page">
+
+    app.innerHTML = `
+
+        <main class="page">
 
             <div class="container">
 
@@ -4391,17 +4829,21 @@ function renderNotFound() {
 
 
                     <h1>
-                        Page not found
+                        Page Not Found
                     </h1>
 
 
+                    <p class="muted">
+                        The page you requested
+                        does not exist.
+                    </p>
+
+
                     <a
-                        class="btn btn-primary"
                         href="#/"
+                        class="btn btn-primary"
                     >
-
-                        Go home
-
+                        Go Home
                     </a>
 
 
@@ -4410,25 +4852,235 @@ function renderNotFound() {
 
             </div>
 
-        </div>
+        </main>
 
     `;
 }
 
 
 /* =========================================================
-   25. START APPLICATION
+   27. ROUTE PROTECTION
    ========================================================= */
 
-getServices();
+function isProtectedRoute(
+    path
+) {
+
+    return (
+
+        path.startsWith(
+            "user/"
+        )
+
+        ||
+
+        path.startsWith(
+            "admin/"
+        )
+
+    );
+}
 
 
-if (!location.hash) {
+function canAccessRoute(
+    path
+) {
 
-    location.hash =
-        "#/";
+    const role =
+        getRole();
+
+
+    if (
+        path.startsWith(
+            "user/"
+        )
+    ) {
+
+        return role === "user";
+
+    }
+
+
+    if (
+        path.startsWith(
+            "admin/"
+        )
+    ) {
+
+        return role === "admin";
+
+    }
+
+
+    return true;
+}
+
+
+/* =========================================================
+   28. MAIN ROUTER
+   ========================================================= */
+
+function refreshCurrentPage() {
+
+    try {
+
+        const {
+            path,
+            params
+        } = parseRoute();
+
+
+        renderHeader(
+            path
+        );
+
+
+        if (
+            isProtectedRoute(path) &&
+            !canAccessRoute(path)
+        ) {
+
+            navigate("login");
+
+            return;
+        }
+
+
+        const page =
+            routes[path] ||
+            renderNotFound;
+
+
+        page(params);
+
+    } catch (error) {
+
+        console.error(
+            "Application rendering error:",
+            error
+        );
+
+
+        const app =
+            document.getElementById(
+                "app"
+            );
+
+
+        if (app) {
+
+            app.innerHTML = `
+
+                <main class="page">
+
+                    <div class="container">
+
+
+                        <div class="empty">
+
+                            <div class="big-icon">
+                                ⚠️
+                            </div>
+
+
+                            <h1>
+                                Something went wrong
+                            </h1>
+
+
+                            <p class="muted">
+
+                                The application
+                                encountered an error.
+
+                            </p>
+
+
+                            <button
+                                class="btn btn-primary"
+                                type="button"
+                                onclick="window.location.reload()"
+                            >
+
+                                Refresh
+
+                            </button>
+
+
+                        </div>
+
+
+                    </div>
+
+                </main>
+
+            `;
+
+        }
+
+    }
+}
+
+
+/* =========================================================
+   29. EVENTS
+   ========================================================= */
+
+window.addEventListener(
+    "hashchange",
+    refreshCurrentPage
+);
+
+
+/* =========================================================
+   30. APPLICATION START
+   ========================================================= */
+
+function initApp() {
+
+    try {
+
+        // Initialize default service data.
+        getServices();
+
+
+        // Make sure a route exists.
+        if (!window.location.hash) {
+
+            window.location.hash =
+                "#/";
+
+            return;
+        }
+
+
+        // Render current route.
+        refreshCurrentPage();
+
+    } catch (error) {
+
+        console.error(
+            "EmergencyConnect startup failed:",
+            error
+        );
+
+    }
 
 }
 
 
-refreshCurrentPage();
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initApp
+    );
+
+} else {
+
+    initApp();
+
+}
